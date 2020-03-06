@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <input type="text" id="msg" />
+  <input type="button" value="发送消息" onclick="send()" />
+  <button onclick="subscribe()">订阅信息</button>
+  <button onclick="unsubscribe()">取消订阅</button>
+  <div>连接状态：<span id="status"></span></div>
+  <div>收到的信息: <span id="getMsg"></span></div>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    // 连接选项
+    const options = {
+      connectTimeout: 4000, // 超时时间 默认 30 * 1000毫秒，收到 CONNACK 之前等待的时间，即连接超时时间
+      keepalive: 20, // 心跳时间，默认 60秒，设置 0 为禁用
+      clean: true, // 设置为 false 以在离线时接收 QoS 1 和 2 消息
+      // 认证信息
+      clientId: '',
+      username: '',
+      password: '',
+    }
+    const client = mqtt.connect('ws://10.20.222.61:8083/mqtt', options)
+
+    client.on('reconnect', (error) => {
+      document.getElementById("status").innerText = '正在重连';
+      console.log('正在重连:', error)
+    })
+
+    client.on('error', (error) => {
+      document.getElementById("status").innerText = '失败';
+      console.log('连接失败:', error)
+    })
+
+    client.on('connect', (e) => {
+      document.getElementById("status").innerText = '成功';
+      console.log('成功连接服务器');
+
+      // 监听接收消息事件
+      client.on('message', (topic, message) => {
+        console.log('收到来自', topic, '的消息', message.toString())
+        document.getElementById("getMsg").innerText = message.toString();
+      })
+
+    })
+
+    function subscribe() {
+      if (client.connected) {
+        client.subscribe('s2c/msg/8fvBQlbdk60ayWZ10zaRnr');
+        document.getElementById("status").innerText = '开始订阅';
+      }
+    }
+
+    function unsubscribe() {
+      if (client.connected) {
+        client.unsubscribe('s2c/msg/8fvBQlbdk60ayWZ10zaRnr', (error) => {
+          console.log(error || '取消订阅')
+          document.getElementById("status").innerText = '取消订阅';
+        }
+        )
+      }
+    }
+
+    function send() {
+      var s = document.getElementById("msg").value;
+      if (s.length > 0) {
+        client.publish('s2c/msg/8fvBQlbdk60ayWZ10zaRnr', s, (error) => {
+          console.log(error || '消息发布成功')
+        })
+        document.getElementById("msg").value = "";
+        console.log("消息发送成功" + s);
+      } else {
+        alert("发送的消息不能为空");
+      }
+    }
+  </script>
+
+
+</body>
+
+</html>
